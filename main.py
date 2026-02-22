@@ -9,14 +9,12 @@ import time
 
 app = FastAPI()
 
-# Railway akan otomatis mengisi env ini dari PostgreSQL Addon
 PGHOST = os.environ.get("PGHOST", "")
 PGPORT = os.environ.get("PGPORT", "")
 PGUSER = os.environ.get("PGUSER", "")
 PGPASSWORD = os.environ.get("PGPASSWORD", "")
 POSTGRES_DB = os.environ.get("POSTGRES_DB", "")
 
-# Connection Pool
 db_pool = pool.SimpleConnectionPool(
     1, 20,
     dbname=POSTGRES_DB,
@@ -32,10 +30,9 @@ def get_db():
 def put_db(conn):
     db_pool.putconn(conn)
 
-# RAM Cache
 cache_data = None
 cache_time = 0
-CACHE_TTL = 1  # detik
+CACHE_TTL = 1
 
 def get_request():
     conn = get_db()
@@ -67,102 +64,25 @@ def index():
                 color: #A0B6C8;
                 font-weight: bold;
                 cursor: pointer;
+                text-decoration: underline;
             }
+            .cusername:hover { opacity: 0.7; }
             .level-0 { color: #5E5E5E; }
             .level-1 { color: #5B2D00; }
             .level-2 { color: #FF8200; text-shadow: 1px 1px #CCCCCC; }
             .level-3 { color: #034AC4; text-shadow: 1px 1px #CCCCCC; }
             .level-4 { color: #00E124; text-shadow: 1px 1px #00B31C; }
             .level-5 { color: #B232B2 }
-            th, td {
-                vertical-align: top;
+            .lastchat {
+                font-weight: normal;
+                cursor: default;
             }
+            th, td { vertical-align: top; }
             th:nth-child(1), td:nth-child(1) { width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap; }
             th:nth-child(2), td:nth-child(2) { width: 120px; min-width: 90px; max-width: 150px; white-space: nowrap; }
             th:nth-child(3), td:nth-child(3) { width: 10px; min-width: 10px; max-width: 35px; white-space: nowrap; }
             th:nth-child(4), td:nth-child(4) { width: auto; word-break: break-word; white-space: pre-line; }
             th:nth-child(5), td:nth-child(5) { width: 130px; min-width: 110px; max-width: 150px; white-space: nowrap; }
-
-            /* Modal Styles */
-            .modal-overlay {
-                display: none;
-                position: fixed;
-                top: 0; left: 0;
-                width: 100%; height: 100%;
-                background: rgba(0,0,0,0.6);
-                z-index: 9999;
-                justify-content: center;
-                align-items: center;
-            }
-            .modal-overlay.active {
-                display: flex;
-            }
-            .modal-box {
-                background: #fff;
-                border-radius: 10px;
-                width: 90%;
-                max-width: 900px;
-                max-height: 85vh;
-                display: flex;
-                flex-direction: column;
-                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-                overflow: hidden;
-            }
-            .modal-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 16px 24px;
-                background: #00abff;
-                color: #fff;
-            }
-            .modal-header h3 {
-                margin: 0;
-                font-size: 18px;
-            }
-            .modal-close {
-                background: none;
-                border: none;
-                color: #fff;
-                font-size: 28px;
-                cursor: pointer;
-                font-weight: bold;
-                line-height: 1;
-            }
-            .modal-close:hover {
-                color: #ff4444;
-            }
-            .modal-body {
-                padding: 20px 24px;
-                overflow-y: auto;
-                flex: 1;
-            }
-            .modal-body table {
-                width: 100%;
-            }
-            .modal-body th:nth-child(1), .modal-body td:nth-child(1) {
-                width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap;
-            }
-            .modal-body th:nth-child(2), .modal-body td:nth-child(2) {
-                width: 130px; min-width: 110px; max-width: 160px; white-space: nowrap;
-            }
-            .modal-body th:nth-child(3), .modal-body td:nth-child(3) {
-                width: 100px; min-width: 80px; max-width: 150px; white-space: nowrap;
-            }
-            .modal-body th:nth-child(4), .modal-body td:nth-child(4) {
-                width: auto; word-break: break-word; white-space: pre-line;
-            }
-            .modal-loading {
-                text-align: center;
-                padding: 40px;
-                color: #888;
-                font-size: 16px;
-            }
-            .chat-total-info {
-                margin-bottom: 12px;
-                font-size: 14px;
-                color: #555;
-            }
         </style>
     </head>
     <body>
@@ -182,32 +102,6 @@ def index():
         </tbody>
     </table>
     <p id="periode"></p>
-
-    <!-- Modal Detail Chat -->
-    <div class="modal-overlay" id="chatModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 id="modalTitle">Chat dari: -</h3>
-                <button class="modal-close" id="modalClose">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="chat-total-info" id="chatTotalInfo"></div>
-                <table id="chatDetail" class="display" style="width:100%">
-                    <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Waktu</th>
-                        <th>Username</th>
-                        <th>Isi Chat</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <script>
         var table = $('#ranking').DataTable({
             "order": [[2, "desc"]],
@@ -219,83 +113,9 @@ def index():
             }
         });
 
-        var chatTable = null;
-
-        function initChatTable() {
-            if (chatTable) {
-                chatTable.destroy();
-                $('#chatDetail tbody').empty();
-            }
-            chatTable = $('#chatDetail').DataTable({
-                "order": [[1, "desc"]],
-                "paging": true,
-                "pageLength": 50,
-                "info": true,
-                "searching": true,
-                "language": {
-                    "emptyTable": "Tidak ada chat ditemukan",
-                    "info": "Menampilkan _START_ - _END_ dari _TOTAL_ chat",
-                    "paginate": { "previous": "Prev", "next": "Next" }
-                }
-            });
-        }
-
-        function openChatModal(username) {
-            $('#chatModal').addClass('active');
-            $('#modalTitle').text('Chat dari: ' + username);
-            $('#chatTotalInfo').html('<span class="modal-loading">Memuat data chat...</span>');
-
-            if (chatTable) {
-                chatTable.destroy();
-                $('#chatDetail tbody').empty();
-            }
-
-            $.getJSON("/chat_detail?username=" + encodeURIComponent(username), function(data) {
-                initChatTable();
-                chatTable.clear();
-
-                if (data.chats.length === 0) {
-                    $('#chatTotalInfo').html('Total chat: <b>0</b>');
-                    chatTable.draw();
-                    return;
-                }
-
-                $('#chatTotalInfo').html('Total chat: <b>' + data.chats.length + '</b> | Periode: <b>' + data.t_awal + '</b> s/d <b>' + data.t_akhir + '</b>');
-
-                for (var i = 0; i < data.chats.length; i++) {
-                    var chat = data.chats[i];
-                    chatTable.row.add([
-                        i + 1,
-                        chat.timestamp,
-                        '<span class="level-' + chat.level + ' cusername">' + chat.username + '</span>',
-                        '<span class="level-' + chat.level + '">' + chat.content + '</span>'
-                    ]);
-                }
-                chatTable.draw();
-            }).fail(function() {
-                $('#chatTotalInfo').html('<span style="color:red;">Gagal memuat data chat</span>');
-            });
-        }
-
-        // Close modal
-        $('#modalClose').click(function() {
-            $('#chatModal').removeClass('active');
-        });
-        $('#chatModal').click(function(e) {
-            if (e.target === this) {
-                $(this).removeClass('active');
-            }
-        });
-        $(document).keydown(function(e) {
-            if (e.key === "Escape") {
-                $('#chatModal').removeClass('active');
-            }
-        });
-
-        // Klik username di tabel ranking
         $(document).on('click', '#ranking tbody .cusername', function() {
             var username = $(this).text().trim();
-            openChatModal(username);
+            window.location.href = "/user/" + encodeURIComponent(username);
         });
 
         function loadData() {
@@ -312,7 +132,7 @@ def index():
                         i+1,
                         '<span class="level-' + row.level + ' cusername">' + row.username + '</span>',
                         row.count,
-                        '<span class="level-' + row.level + ' cusername">' + row.last_content + '</span>',
+                        '<span class="level-' + row.level + ' lastchat">' + row.last_content + '</span>',
                         row.last_time
                     ]);
                 }
@@ -323,6 +143,93 @@ def index():
 
         loadData();
         setInterval(loadData, 1000);
+    </script>
+    </body>
+    </html>
+    """
+    return html
+
+@app.get("/user/{username}", response_class=HTMLResponse)
+def user_chat_page(username: str):
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Chat dari """ + username + """</title>
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+        <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 30px; }
+            table.dataTable thead th { font-weight: bold; }
+            .btn-back { display:inline-block; margin-bottom:20px; padding:8px 16px; background:#00abff; color:#fff; border:none; border-radius:4px; text-decoration:none;}
+            .btn-back:hover { background:#0056b3; }
+            .level-0 { color: #5E5E5E; }
+            .level-1 { color: #5B2D00; }
+            .level-2 { color: #FF8200; text-shadow: 1px 1px #CCCCCC; }
+            .level-3 { color: #034AC4; text-shadow: 1px 1px #CCCCCC; }
+            .level-4 { color: #00E124; text-shadow: 1px 1px #00B31C; }
+            .level-5 { color: #B232B2; }
+            th, td { vertical-align: top; }
+            th:nth-child(1), td:nth-child(1) { width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap; }
+            th:nth-child(2), td:nth-child(2) { width: 130px; min-width: 110px; max-width: 160px; white-space: nowrap; }
+            th:nth-child(3), td:nth-child(3) { width: 100px; min-width: 80px; max-width: 150px; white-space: nowrap; }
+            th:nth-child(4), td:nth-child(4) { width: auto; word-break: break-word; white-space: pre-line; }
+        </style>
+    </head>
+    <body>
+    <h2>Chat dari: <span id="uname">""" + username + """</span></h2>
+    <a href="/" class="btn-back">&#8592; Kembali ke Ranking</a>
+    <p id="info">Memuat data...</p>
+    <table id="chatTable" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>No</th>
+            <th>Waktu</th>
+            <th>Username</th>
+            <th>Isi Chat</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <script>
+        var chatTable = $('#chatTable').DataTable({
+            "order": [[1, "desc"]],
+            "paging": true,
+            "pageLength": 50,
+            "info": true,
+            "searching": true,
+            "language": {
+                "emptyTable": "Tidak ada chat ditemukan",
+                "info": "Menampilkan _START_ - _END_ dari _TOTAL_ chat",
+                "paginate": { "previous": "Prev", "next": "Next" }
+            }
+        });
+
+        var username = decodeURIComponent("""" + username + """");
+
+        $.getJSON("/chat_detail?username=" + encodeURIComponent(username), function(data) {
+            chatTable.clear();
+            if (data.chats.length === 0) {
+                $("#info").html("Total chat: <b>0</b>");
+                chatTable.draw();
+                return;
+            }
+            $("#info").html("Total chat: <b>" + data.chats.length + "</b> &nbsp;|&nbsp; Periode: <b>" + data.t_awal + "</b> s/d <b>" + data.t_akhir + "</b>");
+            for (var i = 0; i < data.chats.length; i++) {
+                var chat = data.chats[i];
+                chatTable.row.add([
+                    i + 1,
+                    chat.timestamp,
+                    '<span class="level-' + chat.level + '">' + chat.username + '</span>',
+                    '<span class="level-' + chat.level + '">' + chat.content + '</span>'
+                ]);
+            }
+            chatTable.draw();
+        }).fail(function() {
+            $("#info").html('<span style="color:red;">Gagal memuat data</span>');
+        });
     </script>
     </body>
     </html>
@@ -426,10 +333,8 @@ def data():
     cache_time = now
     return result
 
-
 @app.get("/chat_detail")
 def chat_detail(username: str):
-    """Endpoint untuk mengambil detail chat dari username tertentu"""
     req = get_request()
     if not req:
         return {"chats": [], "t_awal": "-", "t_akhir": "-"}
