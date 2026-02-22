@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from datetime import datetime
 import time
+import html as html_escape
 
 app = FastAPI()
 
@@ -33,6 +34,10 @@ def put_db(conn):
 cache_data = None
 cache_time = 0
 CACHE_TTL = 1
+
+chat_cache = {}
+chat_cache_time = {}
+CHAT_CACHE_TTL = 2
 
 def get_request():
     conn = get_db()
@@ -73,10 +78,7 @@ def index():
             .level-3 { color: #034AC4; text-shadow: 1px 1px #CCCCCC; }
             .level-4 { color: #00E124; text-shadow: 1px 1px #00B31C; }
             .level-5 { color: #B232B2 }
-            .lastchat {
-                font-weight: normal;
-                cursor: default;
-            }
+            .lastchat { font-weight: normal; cursor: default; }
             th, td { vertical-align: top; }
             th:nth-child(1), td:nth-child(1) { width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap; }
             th:nth-child(2), td:nth-child(2) { width: 120px; min-width: 90px; max-width: 150px; white-space: nowrap; }
@@ -98,8 +100,7 @@ def index():
             <th>Waktu Chat</th>
         </tr>
         </thead>
-        <tbody>
-        </tbody>
+        <tbody></tbody>
     </table>
     <p id="periode"></p>
     <script>
@@ -108,16 +109,12 @@ def index():
             "paging": false,
             "info": false,
             "searching": true,
-            "language": {
-                "emptyTable": "Tidak ada DATA"
-            }
+            "language": {"emptyTable": "Tidak ada DATA"}
         });
-
         $(document).on('click', '#ranking tbody .cusername', function() {
             var username = $(this).text().trim();
             window.location.href = "/user/" + encodeURIComponent(username);
         });
-
         function loadData() {
             $.getJSON("/data", function(data) {
                 table.clear();
@@ -140,7 +137,6 @@ def index():
                 $("#periode").html("Periode: <b>" + data.t_awal + "</b> s/d <b>" + data.t_akhir + "</b>");
             });
         }
-
         loadData();
         setInterval(loadData, 1000);
     </script>
@@ -151,34 +147,36 @@ def index():
 
 @app.get("/user/{username}", response_class=HTMLResponse)
 def user_chat_page(username: str):
-    html = """
+    safe_username = html_escape.escape(username)
+    json_username = json.dumps(username)
+    html = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Chat dari """ + username + """</title>
+        <title>Chat dari {safe_username}</title>
         <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
         <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
         <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
         <style>
-            body { font-family: Arial, sans-serif; margin: 30px; }
-            table.dataTable thead th { font-weight: bold; }
-            .btn-back { display:inline-block; margin-bottom:20px; padding:8px 16px; background:#00abff; color:#fff; border:none; border-radius:4px; text-decoration:none;}
-            .btn-back:hover { background:#0056b3; }
-            .level-0 { color: #5E5E5E; }
-            .level-1 { color: #5B2D00; }
-            .level-2 { color: #FF8200; text-shadow: 1px 1px #CCCCCC; }
-            .level-3 { color: #034AC4; text-shadow: 1px 1px #CCCCCC; }
-            .level-4 { color: #00E124; text-shadow: 1px 1px #00B31C; }
-            .level-5 { color: #B232B2; }
-            th, td { vertical-align: top; }
-            th:nth-child(1), td:nth-child(1) { width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap; }
-            th:nth-child(2), td:nth-child(2) { width: 130px; min-width: 110px; max-width: 160px; white-space: nowrap; }
-            th:nth-child(3), td:nth-child(3) { width: 100px; min-width: 80px; max-width: 150px; white-space: nowrap; }
-            th:nth-child(4), td:nth-child(4) { width: auto; word-break: break-word; white-space: pre-line; }
+            body {{ font-family: Arial, sans-serif; margin: 30px; }}
+            table.dataTable thead th {{ font-weight: bold; }}
+            .btn-back {{ display:inline-block; margin-bottom:20px; padding:8px 16px; background:#00abff; color:#fff; border:none; border-radius:4px; text-decoration:none;}}
+            .btn-back:hover {{ background:#0056b3; }}
+            .level-0 {{ color: #5E5E5E; }}
+            .level-1 {{ color: #5B2D00; }}
+            .level-2 {{ color: #FF8200; text-shadow: 1px 1px #CCCCCC; }}
+            .level-3 {{ color: #034AC4; text-shadow: 1px 1px #CCCCCC; }}
+            .level-4 {{ color: #00E124; text-shadow: 1px 1px #00B31C; }}
+            .level-5 {{ color: #B232B2; }}
+            th, td {{ vertical-align: top; }}
+            th:nth-child(1), td:nth-child(1) {{ width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap; }}
+            th:nth-child(2), td:nth-child(2) {{ width: 130px; min-width: 110px; max-width: 160px; white-space: nowrap; }}
+            th:nth-child(3), td:nth-child(3) {{ width: 100px; min-width: 80px; max-width: 150px; white-space: nowrap; }}
+            th:nth-child(4), td:nth-child(4) {{ width: auto; word-break: break-word; white-space: pre-line; }}
         </style>
     </head>
     <body>
-    <h2>Chat dari: <span id="uname">""" + username + """</span></h2>
+    <h2>Chat dari: {safe_username}</h2>
     <a href="/" class="btn-back">&#8592; Kembali ke Ranking</a>
     <p id="info">Memuat data...</p>
     <table id="chatTable" class="display" style="width:100%">
@@ -190,46 +188,50 @@ def user_chat_page(username: str):
             <th>Isi Chat</th>
         </tr>
         </thead>
-        <tbody>
-        </tbody>
+        <tbody></tbody>
     </table>
     <script>
-        var chatTable = $('#chatTable').DataTable({
+        var chatTable = $('#chatTable').DataTable({{
             "order": [[1, "desc"]],
             "paging": true,
             "pageLength": 50,
             "info": true,
             "searching": true,
-            "language": {
+            "language": {{
                 "emptyTable": "Tidak ada chat ditemukan",
                 "info": "Menampilkan _START_ - _END_ dari _TOTAL_ chat",
-                "paginate": { "previous": "Prev", "next": "Next" }
-            }
-        });
-
-        var username = decodeURIComponent("""" + username + """");
-
-        $.getJSON("/chat_detail?username=" + encodeURIComponent(username), function(data) {
-            chatTable.clear();
-            if (data.chats.length === 0) {
-                $("#info").html("Total chat: <b>0</b>");
+                "paginate": {{ "previous": "Prev", "next": "Next" }}
+            }}
+        }});
+        var targetUser = {json_username};
+        $.ajax({{
+            url: "/chat_detail",
+            data: {{ username: targetUser }},
+            dataType: "json",
+            timeout: 15000,
+            success: function(data) {{
+                chatTable.clear();
+                if (!data.chats || data.chats.length === 0) {{
+                    $("#info").html("Total chat: <b>0</b>");
+                    chatTable.draw();
+                    return;
+                }}
+                $("#info").html("Total chat: <b>" + data.chats.length + "</b> &nbsp;|&nbsp; Periode: <b>" + data.t_awal + "</b> s/d <b>" + data.t_akhir + "</b>");
+                for (var i = 0; i < data.chats.length; i++) {{
+                    var chat = data.chats[i];
+                    chatTable.row.add([
+                        i + 1,
+                        chat.timestamp,
+                        '<span class="level-' + chat.level + '">' + chat.username + '</span>',
+                        '<span class="level-' + chat.level + '">' + chat.content + '</span>'
+                    ]);
+                }}
                 chatTable.draw();
-                return;
-            }
-            $("#info").html("Total chat: <b>" + data.chats.length + "</b> &nbsp;|&nbsp; Periode: <b>" + data.t_awal + "</b> s/d <b>" + data.t_akhir + "</b>");
-            for (var i = 0; i < data.chats.length; i++) {
-                var chat = data.chats[i];
-                chatTable.row.add([
-                    i + 1,
-                    chat.timestamp,
-                    '<span class="level-' + chat.level + '">' + chat.username + '</span>',
-                    '<span class="level-' + chat.level + '">' + chat.content + '</span>'
-                ]);
-            }
-            chatTable.draw();
-        }).fail(function() {
-            $("#info").html('<span style="color:red;">Gagal memuat data</span>');
-        });
+            }},
+            error: function(xhr, status, error) {{
+                $("#info").html('<span style="color:red;">Gagal memuat data: ' + status + '</span>');
+            }}
+        }});
     </script>
     </body>
     </html>
@@ -305,10 +307,7 @@ def data():
                 ranking.append((user_info[u]["username"], user_info[u]))
             else:
                 ranking.append((u, {"username": u, "count": 0, "last_content": "-", "last_time": "-", "level": 0}))
-        ranking = sorted(
-            ranking,
-            key=lambda x: (-x[1]["count"], x[1]["last_time"])
-        )
+        ranking = sorted(ranking, key=lambda x: (-x[1]["count"], x[1]["last_time"]))
     else:
         ranking = sorted(
             [(info["username"], info) for info in user_info.values()],
@@ -324,17 +323,19 @@ def data():
             "last_time": info["last_time"],
             "level": info.get("level", 0)
         })
-    result = {
-        "ranking": data_result,
-        "t_awal": t_awal,
-        "t_akhir": t_akhir
-    }
+    result = {"ranking": data_result, "t_awal": t_awal, "t_akhir": t_akhir}
     cache_data = result
     cache_time = now
     return result
 
 @app.get("/chat_detail")
 def chat_detail(username: str):
+    global chat_cache, chat_cache_time
+    now = time.time()
+    cache_key = username.lower()
+    if cache_key in chat_cache and now - chat_cache_time.get(cache_key, 0) < CHAT_CACHE_TTL:
+        return chat_cache[cache_key]
+
     req = get_request()
     if not req:
         return {"chats": [], "t_awal": "-", "t_akhir": "-"}
@@ -345,20 +346,12 @@ def chat_detail(username: str):
 
     conn = get_db()
     c = conn.cursor()
-    query = """
-        SELECT username, content, timestamp_wib, level 
-        FROM chat 
-        WHERE timestamp_wib >= %s AND timestamp_wib <= %s 
-        AND LOWER(username) = LOWER(%s)
-    """
+    query = "SELECT username, content, timestamp_wib, level FROM chat WHERE timestamp_wib >= %s AND timestamp_wib <= %s AND LOWER(username) = LOWER(%s)"
     params = [t_awal, t_akhir, username]
-
     if kata:
         query += " AND LOWER(content) LIKE %s"
         params.append(f"%{kata}%")
-
     query += " ORDER BY timestamp_wib DESC"
-
     c.execute(query, params)
     rows = c.fetchall()
     c.close()
@@ -373,8 +366,7 @@ def chat_detail(username: str):
             "level": row[3]
         })
 
-    return {
-        "chats": chats,
-        "t_awal": t_awal,
-        "t_akhir": t_akhir
-    }
+    result = {"chats": chats, "t_awal": t_awal, "t_akhir": t_akhir}
+    chat_cache[cache_key] = result
+    chat_cache_time[cache_key] = now
+    return result
