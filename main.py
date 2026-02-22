@@ -66,12 +66,14 @@ def index():
             .btn-history { display:inline-block; margin-bottom:20px; padding:8px 16px; background:#00abff; color:#fff; border:none; border-radius:4px; text-decoration:none;}
             .btn-history:hover { background:#0056b3; }
             .cusername {
-                color: #A0B6C8;
                 font-weight: bold;
                 cursor: pointer;
                 text-decoration: underline;
             }
             .cusername:hover { opacity: 0.7; }
+            .clastchat {
+                font-weight: bold;
+            }
             .level-0 { color: #5E5E5E; }
             .level-1 { color: #5B2D00; }
             .level-2 { color: #FF8200; text-shadow: 1px 1px #CCCCCC; }
@@ -128,7 +130,7 @@ def index():
                         i+1,
                         '<span class="level-' + row.level + ' cusername">' + row.username + '</span>',
                         row.count,
-                        '<span class="level-' + row.level + ' cusername">' + row.last_content + '</span>',
+                        '<span class="level-' + row.level + ' clastchat">' + row.last_content + '</span>',
                         row.last_time
                     ]);
                 }
