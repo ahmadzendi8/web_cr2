@@ -78,7 +78,6 @@ def index():
             .level-3 { color: #034AC4; text-shadow: 1px 1px #CCCCCC; }
             .level-4 { color: #00E124; text-shadow: 1px 1px #00B31C; }
             .level-5 { color: #B232B2 }
-            .lastchat { font-weight: normal; cursor: default; }
             th, td { vertical-align: top; }
             th:nth-child(1), td:nth-child(1) { width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap; }
             th:nth-child(2), td:nth-child(2) { width: 120px; min-width: 90px; max-width: 150px; white-space: nowrap; }
@@ -129,7 +128,7 @@ def index():
                         i+1,
                         '<span class="level-' + row.level + ' cusername">' + row.username + '</span>',
                         row.count,
-                        '<span class="level-' + row.level + ' lastchat">' + row.last_content + '</span>',
+                        '<span class="level-' + row.level + ' cusername">' + row.last_content + '</span>',
                         row.last_time
                     ]);
                 }
@@ -162,12 +161,12 @@ def user_chat_page(username: str):
             table.dataTable thead th {{ font-weight: bold; }}
             .btn-back {{ display:inline-block; margin-bottom:20px; padding:8px 16px; background:#00abff; color:#fff; border:none; border-radius:4px; text-decoration:none;}}
             .btn-back:hover {{ background:#0056b3; }}
-            .level-0 {{ color: #5E5E5E; }}
-            .level-1 {{ color: #5B2D00; }}
-            .level-2 {{ color: #FF8200; text-shadow: 1px 1px #CCCCCC; }}
-            .level-3 {{ color: #034AC4; text-shadow: 1px 1px #CCCCCC; }}
-            .level-4 {{ color: #00E124; text-shadow: 1px 1px #00B31C; }}
-            .level-5 {{ color: #B232B2; }}
+            .level-0 {{ color: #5E5E5E; font-weight: bold; }}
+            .level-1 {{ color: #5B2D00; font-weight: bold; }}
+            .level-2 {{ color: #FF8200; text-shadow: 1px 1px #CCCCCC; font-weight: bold; }}
+            .level-3 {{ color: #034AC4; text-shadow: 1px 1px #CCCCCC; font-weight: bold; }}
+            .level-4 {{ color: #00E124; text-shadow: 1px 1px #00B31C; font-weight: bold; }}
+            .level-5 {{ color: #B232B2; font-weight: bold; }}
             th, td {{ vertical-align: top; }}
             th:nth-child(1), td:nth-child(1) {{ width: 10px; min-width: 10px; max-width: 20px; white-space: nowrap; }}
             th:nth-child(2), td:nth-child(2) {{ width: 130px; min-width: 110px; max-width: 160px; white-space: nowrap; }}
@@ -194,13 +193,16 @@ def user_chat_page(username: str):
         var chatTable = $('#chatTable').DataTable({{
             "order": [[1, "desc"]],
             "paging": true,
-            "pageLength": 50,
+            "lengthMenu": [[48, 88, 888, -1], [48, 88, 888, "Semua"]],
+            "pageLength": 48,
             "info": true,
             "searching": true,
             "language": {{
                 "emptyTable": "Tidak ada chat ditemukan",
                 "info": "Menampilkan _START_ - _END_ dari _TOTAL_ chat",
-                "paginate": {{ "previous": "Prev", "next": "Next" }}
+                "lengthMenu": "Tampilkan _MENU_ data",
+                "paginate": {{ "previous": "Prev", "next": "Next" }},
+                "search": "Cari:"
             }}
         }});
         var targetUser = {json_username};
@@ -223,7 +225,7 @@ def user_chat_page(username: str):
                         i + 1,
                         chat.timestamp,
                         '<span class="level-' + chat.level + '">' + chat.username + '</span>',
-                        '<span class="level-' + chat.level + '">' + chat.content + '</span>'
+                        chat.content
                     ]);
                 }}
                 chatTable.draw();
